@@ -1,10 +1,4 @@
-import React, {
-  useState,
-  useEffect,
-  useRef,
-  useMemo,
-  useCallback,
-} from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Subtitle, Title, Space } from "../components/StyledComponents";
 import {
   CONNECT_TO_GIT,
@@ -13,11 +7,10 @@ import {
   createMessage,
   DEPLOY_KEY_USAGE_GUIDE_MESSAGE,
   DEPLOY_KEY_TITLE,
-  REMOTE_URL_INPUT_PLACEHOLDER,
 } from "constants/messages";
 import styled from "styled-components";
 import TextInput from "components/ads/TextInput";
-import { ReactComponent as LinkSvg } from "assets/icons/ads/link_2.svg";
+// import { ReactComponent as LinkSvg } from "assets/icons/ads/link_2.svg";
 import UserGitProfileSettings from "../components/UserGitProfileSettings";
 import { AUTH_TYPE_OPTIONS } from "../constants";
 import { Colors } from "constants/Colors";
@@ -31,6 +24,7 @@ import { Variant } from "components/ads/common";
 import { useDispatch, useSelector } from "react-redux";
 import copy from "copy-to-clipboard";
 import { getCurrentAppGitMetaData } from "selectors/applicationSelectors";
+import Toggle from "components/ads/Toggle";
 import Text, { TextType } from "components/ads/Text";
 import { getGlobalGitConfig } from "selectors/gitSyncSelectors";
 import {
@@ -41,19 +35,14 @@ import {
 import DirectDeploy from "../components/DirectDeploy";
 import TooltipComponent from "components/ads/Tooltip";
 import { getLocalGitConfig } from "selectors/gitSyncSelectors";
-import { GIT_DISCONNECT } from "constants/messages";
-import { emailValidator } from "components/ads/TextInput";
-import DisconnectGitConfirmPopup from "../components/DisconnectGitConfirmPopup";
-import { disconnectToGitInit } from "actions/gitSyncActions";
-
 export const UrlOptionContainer = styled.div`
   display: flex;
   align-items: center;
 
   & .primary {
   }
-  margin-bottom: ${(props) => `${props.theme.spaces[1]}px`};
-  margin-top: ${(props) => `${props.theme.spaces[7]}px`};
+  margin-bottom: 8px;
+  margin-top: ${(props) => `${props.theme.spaces[2]}px`};
 `;
 
 const UrlContainer = styled.div`
@@ -171,23 +160,15 @@ type Props = {
 };
 
 function GitConnection({ isImport, onSuccess }: Props) {
-  const { remoteUrl: remoteUrlInStore = "" } =
+  const { remoteUrl: remoteUrlInStore } =
     useSelector(getCurrentAppGitMetaData) || ({} as any);
 
-  const [remoteUrl, setRemoteUrl] = useState(remoteUrlInStore);
-  const [showDisconnectPopup, setShowDisconnectPopup] = useState(false);
+  const [remoteUrl, setRemoteUrl] = useState<string>(remoteUrlInStore);
 
   const isGitConnected = !!remoteUrlInStore;
 
   const globalGitConfig = useSelector(getGlobalGitConfig);
   const localGitConfig = useSelector(getLocalGitConfig);
-  const isLocalConfigDefined = !!(
-    localGitConfig.authorEmail || localGitConfig.authorName
-  );
-
-  const isGlobalConfigDefined = !!(
-    globalGitConfig.authorEmail || globalGitConfig.authorName
-  );
 
   const dispatch = useDispatch();
 
@@ -197,20 +178,13 @@ function GitConnection({ isImport, onSuccess }: Props) {
       authorEmail: "",
     };
 
-    if (isGlobalConfigDefined) {
-      initialAuthInfo = {
-        authorName: globalGitConfig.authorName || "",
-        authorEmail: globalGitConfig.authorEmail || "",
-      };
-    }
-    // when local config is defined we will only show local config
-    if (isLocalConfigDefined) {
+    if (localGitConfig.authorEmail || localGitConfig.authorName) {
       initialAuthInfo = {
         authorName: localGitConfig.authorName || "",
         authorEmail: localGitConfig.authorEmail || "",
       };
     }
-
+    // TODO: fetch local config
     return initialAuthInfo;
   };
 
@@ -224,9 +198,7 @@ function GitConnection({ isImport, onSuccess }: Props) {
     authorEmail: initialAuthorInfoRef.current.authorEmail,
   });
 
-  const [useGlobalConfig, setUseGlobalConfig] = useState(
-    !isLocalConfigDefined && isGlobalConfigDefined,
-  );
+  const [useGlobalConfig, setUseGlobalConfig] = useState(false);
   const [showCopied, setShowCopied] = useState(false);
   const timerRef = useRef(0);
 
@@ -274,54 +246,33 @@ function GitConnection({ isImport, onSuccess }: Props) {
     }
   };
 
-  useEffect(() => {
-    // when disconnected remoteURL becomes undefined
-    if (!remoteUrlInStore) {
-      setRemoteUrl("");
-    }
-  }, [remoteUrlInStore]);
+  const placeholderText = "Paste Your Git SSH URL";
 
-  const placeholderText = createMessage(REMOTE_URL_INPUT_PLACEHOLDER);
-
-  const isAuthorInfoUpdated = useCallback(() => {
+  const isAuthorInfoUpdated = () => {
     return (
       authorInfo.authorEmail !== initialAuthorInfoRef.current.authorEmail ||
       authorInfo.authorName !== initialAuthorInfoRef.current.authorName
     );
-  }, [
-    authorInfo.authorEmail,
-    authorInfo.authorName,
-    initialAuthorInfoRef.current.authorEmail,
-    initialAuthorInfoRef.current.authorName,
-  ]);
+  };
 
   const isRemoteUrlUpdated = () => {
     return remoteUrl !== remoteUrlInStore;
   };
 
   const onSubmit = () => {
-    if (
-      authorInfo.authorName &&
-      authorInfo.authorEmail &&
-      emailValidator(authorInfo.authorEmail).isValid
-    ) {
-      // Also check if useDefaultConfig switch is changed
-      if (isGitConnected && !isRemoteUrlUpdated()) {
-        if (isAuthorInfoUpdated()) {
-          // just update local config
-          dispatch(updateLocalGitConfigInit(authorInfo));
-        }
-      } else {
-        connectToGit({
-          remoteUrl,
-          gitProfile: authorInfo,
-          isImport,
-          isDefaultProfile: useGlobalConfig,
-        });
+    // Also check if isDefaultProfile switch is changed
+    // For this we will need to store `isDefaultProfile` in backend
+    if (isGitConnected && !isRemoteUrlUpdated()) {
+      if (isAuthorInfoUpdated()) {
+        // just update local config
+        dispatch(updateLocalGitConfigInit(authorInfo));
       }
     } else {
-      Toaster.show({
-        text: "Please enter valid user details",
+      connectToGit({
+        remoteUrl,
+        gitProfile: authorInfo,
+        isImport,
+        isDefaultProfile: useGlobalConfig,
       });
     }
   };
@@ -337,17 +288,15 @@ function GitConnection({ isImport, onSuccess }: Props) {
     setRemoteUrl(value);
   };
 
-  const remoteUrlIsValid = useCallback(
-    (value: string) => value.startsWith(HTTP_LITERAL),
-    [],
-  );
+  const remoteUrlIsValid = (value: string) => value.startsWith(HTTP_LITERAL);
 
-  const submitButtonDisabled = useMemo(
-    () =>
-      !authorInfo.authorEmail ||
-      !authorInfo.authorName ||
-      !emailValidator(authorInfo.authorEmail).isValid,
-    [authorInfo.authorEmail, authorInfo.authorName],
+  const submitButtonDisabled =
+    !authorInfo.authorEmail ||
+    !authorInfo.authorName ||
+    (isGitConnected && useGlobalConfig);
+
+  const isGlobalConfigDefined = !!(
+    globalGitConfig.authorEmail && globalGitConfig.authorName
   );
 
   useEffect(() => {
@@ -357,28 +306,13 @@ function GitConnection({ isImport, onSuccess }: Props) {
   }, []);
 
   useEffect(() => {
-    // on local config update
-    setAuthorInfo(getInitGitConfig());
-  }, [
-    localGitConfig.authorEmail,
-    localGitConfig.authorName,
-    setAuthorInfo,
-    globalGitConfig.authorEmail,
-    globalGitConfig.authorEmail,
-  ]);
+    setAuthorInfo(localGitConfig);
+  }, [localGitConfig.authorEmail, localGitConfig.authorName, setAuthorInfo]);
 
   const showDirectDeployOption = !SSHKeyPair && !remoteUrl;
 
   const toggleHandler = () => {
     setUseGlobalConfig(!useGlobalConfig);
-  };
-
-  const disconnectHandler = () => {
-    dispatch(disconnectToGitInit());
-  };
-
-  const showDisconnectConfirmationPopup = () => {
-    setShowDisconnectPopup(true);
   };
 
   return (
@@ -393,6 +327,7 @@ function GitConnection({ isImport, onSuccess }: Props) {
         <UrlContainer>
           <UrlInputContainer>
             <TextInput
+              className="t--git-repo-input"
               disabled={remoteUrl === remoteUrlInStore && !!remoteUrl}
               fill
               onChange={remoteUrlChangeHandler}
@@ -406,18 +341,16 @@ function GitConnection({ isImport, onSuccess }: Props) {
               value={remoteUrl}
             />
           </UrlInputContainer>
-          {isGitConnected && (
-            <TooltipComponent content={createMessage(GIT_DISCONNECT)}>
-              <Icon
-                color={Colors.DARK_GRAY}
-                hoverColor={Colors.GRAY2}
-                onClick={showDisconnectConfirmationPopup}
-                size="22px"
-              >
-                <LinkSvg />
-              </Icon>
-            </TooltipComponent>
-          )}
+          {/* <TooltipComponent content="Unlink">
+            <Icon
+              color={Colors.DARK_GRAY}
+              hoverColor={Colors.GRAY2}
+              onClick={() => setRemoteUrl("")}
+              size="22px"
+            >
+              <LinkSvg />
+            </Icon>
+          </TooltipComponent> */}
         </UrlContainer>
 
         {!SSHKeyPair ? (
@@ -425,6 +358,7 @@ function GitConnection({ isImport, onSuccess }: Props) {
             <ButtonContainer topMargin={10}>
               <Button
                 category={Category.secondary}
+                className="t--submit-repo-url-button"
                 disabled={!remoteUrl}
                 isLoading={generatingSSHKey || fetchingSSHKeyPair}
                 onClick={() => generateSSHKey()}
@@ -474,47 +408,53 @@ function GitConnection({ isImport, onSuccess }: Props) {
                 </TooltipWrapper>
               )}
             </FlexRow>
-            <Text type={TextType.P3}>
+            <span>
               {createMessage(DEPLOY_KEY_USAGE_GUIDE_MESSAGE)}
               <LintText href={deployKeyDocUrl} target="_blank">
                 &nbsp;Learn More
               </LintText>
-            </Text>
+            </span>
           </>
         )}
       </Section>
 
       {SSHKeyPair && remoteUrl ? (
         <>
+          {isGlobalConfigDefined ? (
+            <>
+              <Space size={7} />
+              <FlexRow>
+                <Text className="" type={TextType.P1}>
+                  Use Default Config
+                </Text>
+                <Space horizontal size={2} />
+                <Toggle onToggle={toggleHandler} value={useGlobalConfig} />
+              </FlexRow>
+            </>
+          ) : null}
+
           <Space size={7} />
           <UserGitProfileSettings
             authType={selectedAuthType.label || ""}
             authorInfo={useGlobalConfig ? globalGitConfig : authorInfo}
-            isGlobalConfigDefined={isGlobalConfigDefined}
-            isLocalConfigDefined={isLocalConfigDefined}
+            disabled={useGlobalConfig}
             setAuthorInfo={setAuthorInfo}
-            toggleUseDefaultConfig={toggleHandler}
-            useGlobalConfig={useGlobalConfig}
           />
           <ButtonContainer topMargin={11}>
             <Button
+              className="t--connect-submit-btn"
               disabled={submitButtonDisabled}
               isLoading={isConnectingToGit}
               onClick={onSubmit}
               size={Size.large}
               tag="button"
-              text={isGitConnected ? "UPDATE CONFIG" : "CONNECT"}
+              text={isGitConnected ? "UPDATE" : "CONNECT"}
             />
           </ButtonContainer>
         </>
       ) : (
         showDirectDeployOption && <DirectDeploy />
       )}
-      <DisconnectGitConfirmPopup
-        isModalOpen={showDisconnectPopup}
-        onClose={() => setShowDisconnectPopup(false)}
-        onContinue={disconnectHandler}
-      />
     </Container>
   );
 }

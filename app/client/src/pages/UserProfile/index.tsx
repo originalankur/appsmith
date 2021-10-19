@@ -9,8 +9,6 @@ import General from "./General";
 import { Colors } from "constants/Colors";
 import getFeatureFlags from "utils/featureFlags";
 import GitConfig from "./GitConfig";
-import { useLocation } from "react-router";
-import { GIT_PROFILE_ROUTE } from "constants/routes";
 
 const ProfileWrapper = styled.div`
   width: ${(props) => props.theme.pageContentWidth}px;
@@ -31,9 +29,6 @@ const LinkToApplications = styled(Link)`
 `;
 
 function UserProfile() {
-  const location = useLocation();
-
-  let initialTabIndex = 0;
   const tabs: TabProp[] = [
     {
       key: "general",
@@ -50,9 +45,6 @@ function UserProfile() {
       panelComponent: <GitConfig />,
       icon: "git-branch",
     });
-    if (location.pathname === GIT_PROFILE_ROUTE) {
-      initialTabIndex = 1;
-    }
   }
 
   return (
@@ -62,7 +54,7 @@ function UserProfile() {
           <Icon color={Colors.SILVER_CHALICE} icon="chevron-left" />
           <Text type={TextType.H1}>Profile</Text>
         </LinkToApplications>
-        <TabComponent selectedIndex={initialTabIndex} tabs={tabs} />
+        <TabComponent tabs={tabs} />
       </ProfileWrapper>
     </PageWrapper>
   );

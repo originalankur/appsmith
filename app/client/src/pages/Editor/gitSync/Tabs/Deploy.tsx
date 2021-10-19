@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useState } from "react";
 import { Title } from "../components/StyledComponents";
 import {
   DEPLOY_YOUR_APPLICATION,
@@ -9,8 +9,8 @@ import {
   PUSH_TO,
   createMessage,
   COMMIT_AND_PUSH,
-  // COMMITTED_SUCCESSFULLY,
-  // PUSHED_SUCCESSFULLY,
+  COMMITTED_SUCCESSFULLY,
+  PUSHED_SUCCESSFULLY,
 } from "constants/messages";
 import styled from "styled-components";
 import TextInput from "components/ads/TextInput";
@@ -20,11 +20,10 @@ import Checkbox, { LabelContainer } from "components/ads/Checkbox";
 import { DEFAULT_REMOTE } from "../constants";
 
 import {
-  getGitStatus,
-  // getIsCommitSuccessful,
+  getIsCommitSuccessful,
   getIsCommittingInProgress,
   getIsPushingToGit,
-  // getIsPushSuccessful,
+  getIsPushSuccessful,
 } from "selectors/gitSyncSelectors";
 import { useDispatch, useSelector } from "react-redux";
 import { commitToRepoInit } from "actions/gitSyncActions";
@@ -37,9 +36,6 @@ import { withTheme } from "styled-components";
 import { getCurrentAppGitMetaData } from "selectors/applicationSelectors";
 import { pushToRepoInit } from "actions/gitSyncActions";
 import DeployPreview from "../components/DeployPreview";
-import { fetchGitStatusInit } from "actions/gitSyncActions";
-import { getGitPushError } from "selectors/gitSyncSelectors";
-import Text, { TextType } from "components/ads/Text";
 
 const Section = styled.div`
   margin-bottom: ${(props) => props.theme.spaces[11]}px;
@@ -65,67 +61,21 @@ const Container = styled.div`
   }
 `;
 
-const ErrorContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  .error-text {
-    color: ${Colors.POMEGRANATE2};
-  }
-  .see-more-text {
-    font-size: 12px;
-    cursor: pointer;
-    color: ${Colors.GRAY};
-  }
-`;
-
-const ErrorMsgWrapper = styled.div<{ $hide: boolean }>`
-  margin-top: ${(props) => props.theme.spaces[8]}px;
-  max-height: 160px;
-  max-width: 96%;
-  overflow-y: ${(props) => (props.$hide ? "hidden" : "scroll")};
-  .git-error-text {
-    height: 100%;
-    margin: 0px;
-    padding: 0px;
-    font-size: 12px;
-    white-space: pre-line;
-    word-break: break-word;
-  }
-`;
-
-function Deploy({ theme }: { theme: Theme }) {
+const Commit = withTheme(function Commit({ theme }: { theme: Theme }) {
   const [pushImmediately, setPushImmediately] = useState(true);
   const [commitMessage, setCommitMessage] = useState("Initial Commit");
-  const [showCompleteError, setShowCompleteError] = useState(false);
   const isCommittingInProgress = useSelector(getIsCommittingInProgress);
   const isPushingToGit = useSelector(getIsPushingToGit);
   const gitMetaData = useSelector(getCurrentAppGitMetaData);
-  const gitStatus = useSelector(getGitStatus);
-  const gitPushError = useSelector(getGitPushError);
-  const errorMsgRef = useRef<HTMLDivElement>(null);
 
-  const hasChangesToCommit =
-    (gitStatus && gitStatus?.uncommitted?.length > 0) ||
-    (gitStatus && gitStatus?.untracked?.length > 0);
+  const isCommitSuccessful = useSelector(getIsCommitSuccessful);
+  const isPushSuccessful = useSelector(getIsPushSuccessful);
 
-  const hasCommitsToPush = gitStatus?.isClean;
-
-  // const isCommitSuccessful = useSelector(getIsCommitSuccessful);
-  // const isPushSuccessful = useSelector(getIsPushSuccessful);
-
-  const currentBranchName = gitMetaData?.branchName;
-
+  const currentBranch = gitMetaData?.branchName;
   const dispatch = useDispatch();
 
   const handleCommit = () => {
-    if (currentBranchName) {
-      dispatch(
-        commitToRepoInit({
-          commitMessage,
-          doPush: pushImmediately,
-        }),
-      );
-    }
+    dispatch(commitToRepoInit({ commitMessage, doPush: pushImmediately }));
   };
 
   const handlePushToGit = () => {
@@ -134,39 +84,23 @@ function Deploy({ theme }: { theme: Theme }) {
 
   let commitButtonText = "";
 
-  // if (isCommitSuccessful) {
-  // if (pushImmediately) {
-  //   commitButtonText = createMessage(COMMITTED_SUCCESSFULLY);
-  // } else {
-  //   commitButtonText = createMessage(COMMITTED_SUCCESSFULLY);
-  // }
-  // } else {
-  if (pushImmediately) {
-    commitButtonText = createMessage(COMMIT_AND_PUSH);
+  if (isCommitSuccessful) {
+    if (pushImmediately) {
+      commitButtonText = createMessage(COMMITTED_SUCCESSFULLY);
+    } else {
+      commitButtonText = createMessage(COMMITTED_SUCCESSFULLY);
+    }
   } else {
-    commitButtonText = createMessage(COMMIT);
-  }
-  // }
-
-  const pushButtonText =
-    // isPushSuccessful
-    //   ? createMessage(PUSHED_SUCCESSFULLY) :
-    createMessage(PUSH_CHANGES);
-
-  useEffect(() => {
-    dispatch(fetchGitStatusInit());
-  }, []);
-
-  const commitButtonDisabled = !hasChangesToCommit || !commitMessage;
-  const pushButtonDisabled = !hasCommitsToPush;
-
-  let errorMsgShowMoreEnabled = false;
-  if (errorMsgRef && errorMsgRef.current) {
-    const element = errorMsgRef.current;
-    if (element && element?.offsetHeight && element?.scrollHeight) {
-      errorMsgShowMoreEnabled = element?.offsetHeight < element?.scrollHeight;
+    if (pushImmediately) {
+      commitButtonText = createMessage(COMMIT_AND_PUSH);
+    } else {
+      commitButtonText = createMessage(COMMIT);
     }
   }
+
+  const pushButtonText = isPushSuccessful
+    ? createMessage(PUSHED_SUCCESSFULLY)
+    : createMessage(PUSH_CHANGES);
 
   return (
     <Container>
@@ -175,33 +109,33 @@ function Deploy({ theme }: { theme: Theme }) {
         <Row>
           <SectionTitle>
             <span>{createMessage(COMMIT_TO)}</span>
-            <span className="branch">&nbsp;{currentBranchName}</span>
+            <span className="branch">&nbsp;{currentBranch}</span>
           </SectionTitle>
         </Row>
         <Space size={3} />
         <TextInput
           autoFocus
           defaultValue={commitMessage}
-          disabled={hasCommitsToPush}
+          disabled={isCommitSuccessful}
           fill
           onChange={setCommitMessage}
         />
         <Space size={3} />
         <Checkbox
-          disabled={hasCommitsToPush}
+          disabled={isCommitSuccessful}
           isDefaultChecked
           label={`${createMessage(
             PUSH_CHANGES_IMMEDIATELY_TO,
-          )} ${DEFAULT_REMOTE}/${currentBranchName}`}
+          )} ${DEFAULT_REMOTE}/${currentBranch}`}
           onCheckChange={(checked: boolean) => setPushImmediately(checked)}
         />
         <Space size={11} />
         <Button
-          disabled={commitButtonDisabled}
+          className="t--commit-button"
+          disabled={isCommitSuccessful}
           isLoading={isCommittingInProgress}
           onClick={handleCommit}
           size={Size.medium}
-          tag="button"
           text={commitButtonText}
           width="max-content"
         />
@@ -220,46 +154,26 @@ function Deploy({ theme }: { theme: Theme }) {
               }}
             >
               {createMessage(PUSH_TO)}
-              <span className="branch">&nbsp;{currentBranchName}</span>
+              <span className="branch">&nbsp;{currentBranch}</span>
             </SectionTitle>
           </Row>
           <Space size={3} />
           <Button
             category={Category.tertiary}
-            disabled={pushButtonDisabled}
+            disabled={isPushSuccessful}
             isLoading={isPushingToGit}
             onClick={handlePushToGit}
             size={Size.medium}
-            tag="button"
             text={pushButtonText}
             width="max-content"
           />
         </Section>
       ) : null}
-
-      {!hasChangesToCommit && !hasCommitsToPush && <DeployPreview />}
-      {/* Disabled currently */}
-      {gitPushError && false && (
-        <ErrorContainer>
-          <Text className="error-text" type={TextType.P1}>
-            Error while pushing
-          </Text>
-          {/* Add Show More toggle */}
-          <ErrorMsgWrapper $hide={!showCompleteError} ref={errorMsgRef}>
-            <pre className="git-error-text error-text">{gitPushError}</pre>
-          </ErrorMsgWrapper>
-          {errorMsgShowMoreEnabled && (
-            <span
-              className="see-more-text"
-              onClick={() => setShowCompleteError(!showCompleteError)}
-            >
-              {showCompleteError ? "SEE LESS" : "SEE MORE"}
-            </span>
-          )}
-        </ErrorContainer>
+      {(isPushSuccessful || (pushImmediately && isCommitSuccessful)) && (
+        <DeployPreview />
       )}
     </Container>
   );
-}
+});
 
-export default withTheme(Deploy);
+export default Commit;

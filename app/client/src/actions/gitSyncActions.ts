@@ -1,9 +1,8 @@
 import { ReduxActionTypes } from "constants/ReduxActionConstants";
 import { ConnectToGitPayload } from "api/GitSyncAPI";
-import { ReduxActionWithCallbacks } from "constants/ReduxActionConstants";
+import { ReduxActionWithCallbacks } from "../constants/ReduxActionConstants";
 import { GitSyncModalTab, GitConfig } from "entities/GitSync";
-import { GitApplicationMetadata } from "api/ApplicationApi";
-import { GitStatusData } from "reducers/uiReducers/gitSyncReducer";
+import { GitApplicationMetadata } from "../api/ApplicationApi";
 
 // test comment
 
@@ -67,32 +66,22 @@ export const connectToGitSuccess = (payload: ConnectToGitResponse) => ({
   payload,
 });
 
-export const disconnectToGitInit = () => ({
-  type: ReduxActionTypes.DISCONNECT_TO_GIT_INIT,
-  payload: null,
-});
-
-export const disconnectToGitSuccess = (payload: unknown) => ({
-  type: ReduxActionTypes.DISCONNECT_TO_GIT_SUCCESS,
-  payload,
-});
-
-export const switchGitBranchInit = (branchName: string) => ({
+export const switchGitBranchInit = (branch: string) => ({
   type: ReduxActionTypes.SWITCH_GIT_BRANCH_INIT,
-  payload: branchName,
+  payload: branch,
 });
 
 export const createNewBranchInit = ({
-  branchName,
+  branch,
   onErrorCallback,
   onSuccessCallback,
 }: {
-  branchName: string;
+  branch: string;
   onSuccessCallback: () => void;
   onErrorCallback: () => void;
 }) => ({
   type: ReduxActionTypes.CREATE_NEW_BRANCH_INIT,
-  payload: branchName,
+  payload: branch,
   onErrorCallback,
   onSuccessCallback,
 });
@@ -162,12 +151,7 @@ export const fetchLocalGitConfigSuccess = (payload: GitConfig) => ({
   payload,
 });
 
-export const fetchGitStatusInit = () => ({
-  type: ReduxActionTypes.FETCH_GIT_STATUS_INIT,
-  payload: null,
-});
-
-export const fetchGitStatusSuccess = (payload: GitStatusData) => ({
-  type: ReduxActionTypes.FETCH_GIT_STATUS_SUCCESS,
+export const updateBranchLocally = (payload: string) => ({
+  type: ReduxActionTypes.UPDATE_BRANCH_LOCALLY,
   payload,
 });

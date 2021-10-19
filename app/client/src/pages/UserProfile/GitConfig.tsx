@@ -17,8 +17,6 @@ import { Classes } from "@blueprintjs/core";
 import TextInput, { notEmptyValidator } from "components/ads/TextInput";
 import Button, { Category, Size } from "components/ads/Button";
 import { useDispatch, useSelector } from "react-redux";
-import { emailValidator } from "components/ads/TextInput";
-import { Toaster } from "components/ads/Toast";
 import {
   getGlobalGitConfig,
   getIsFetchingGlobalGitConfig,
@@ -57,21 +55,14 @@ export default function GitConfig() {
   useEffect(() => {
     setAuthorName(globalGitConfig.authorName);
     setAuthorEmail(globalGitConfig.authorEmail);
-  }, [globalGitConfig.authorName, globalGitConfig.authorEmail]);
+  }, [globalGitConfig]);
 
   const updateConfig = () => {
-    if (authorName && authorEmail && emailValidator(authorEmail).isValid) {
-      setAreFormValuesUpdated(false);
-      dispatch(updateGlobalGitConfigInit({ authorName, authorEmail }));
-    } else {
-      Toaster.show({
-        text: "Please enter valid user details",
-      });
-    }
+    setAreFormValuesUpdated(false);
+    dispatch(updateGlobalGitConfigInit({ authorName, authorEmail }));
   };
 
   useEffect(() => {
-    // onMount Fetch Global config
     dispatch(fetchGlobalGitConfigInit());
   }, []);
 
@@ -114,7 +105,7 @@ export default function GitConfig() {
               fill={false}
               onChange={setAuthorEmail}
               placeholder={createMessage(AUTHOR_EMAIL)}
-              validator={emailValidator}
+              validator={notEmptyValidator}
             />
           </div>
         )}
